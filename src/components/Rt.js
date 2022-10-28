@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import { flushSync } from 'react-dom';
 import flankerImg from '../incongruentleft.png';
 
 export default class Rt extends Component {
@@ -22,8 +21,10 @@ export default class Rt extends Component {
                 cr: 39
             },
             data: [],
-            allowedKeys: [37, 39]
+            allowedKeys: [37, 39],
+            isStarted:true
         };
+        this.buttonText = "Stop"
         this.keyPressed = null
         this.rt = null
         this.gotKey = false
@@ -46,9 +47,16 @@ export default class Rt extends Component {
         clearInterval(this.intervalId)
     }
 
+    startStop = () => {
+        if (!this.state.isStarted) {
+            this.intervalId = setInterval(this.timer.bind(this), 1000)
+        } else {
+            clearInterval(this.intervalId)
+        }
+      }
+
 
     animate = () => {
-        const duration = this.props.duration || 1175
         console.log('animate')
 
         document.onkeydown = (e) => {
@@ -65,7 +73,7 @@ export default class Rt extends Component {
         console.log(this.state.currentCount)
         if (this.state.currentCount < 1) {
             // clearInterval(this.intervalId);
-            this.state.currentCount = 10
+            this.setState({ currentCount: 10 })
             this.setState({
                 currentCount: 10
             })
@@ -77,9 +85,9 @@ export default class Rt extends Component {
         if (this.timing) {
             this.rt = new Date() - this.rt
             this.gotKey = true
-            let res = "key down = " + event.key + " rt = " + this.rt
+            let res = "key down = " + event.key + "  |  rt = " + this.rt + " ms"
             console.log(res)
-            this.results = <p>Results:{res}</p>
+            this.results = <p>{res}</p>
         }
     };
 
@@ -87,6 +95,7 @@ export default class Rt extends Component {
     render() {
         let val
         let flankerI
+        let bText= this.state.isStarted? "STOP":"START";
 
         if (this.state.currentCount >= 4 && this.state.currentCount <= 7) {
             if (this.state.currentCount == 7) {
@@ -97,10 +106,11 @@ export default class Rt extends Component {
             }
             val = <p>{this.state.currentCount}</p>
             flankerI = <p><img src={flankerImg} /></p>
+            let element = document.querySelector('input');
         } else if (this.state.currentCount > 7) {
             val = <p>preparing...</p>
             this.timing = false
-            this.results = <p>Results: Waiting for key press</p>
+            this.results = <p></p>
         } else {
             if (this.timing) {
 
@@ -109,6 +119,7 @@ export default class Rt extends Component {
             val = <p>timeout</p>
         }
         return (
+            <React.Fragment>
             <div>
                 <div
                     style={{
@@ -121,14 +132,19 @@ export default class Rt extends Component {
                     <h1> Realtime keydown event test</h1>
                     <p> hit a key as soon as you see the image</p>
                     <p> debug info in chrome inspect console</p>
+                    <button onClick={() => {
+                        this.setState({isStarted: !this.state.isStarted})
+                        this.startStop()
+                        }}>{bText}</button>
                     <div>
                         {val}
                         {flankerI}
                     </div>
-                    <input type="text" onKeyPress={(e) => this.handler(e)} />
+                    <input id="rtInput" type="text" onKeyPress={(e) => this.handler(e)} />
                     <div>{this.results}</div>
                 </div>
             </div>
+            </React.Fragment>
         );
     }
 }
