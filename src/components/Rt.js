@@ -1,51 +1,42 @@
 import React, { Component } from 'react';
 import flankerImg from '../incongruentleft.png';
-import {CustomTextInput} from './customTextInput';
+import { CustomTextInput } from './customTextInput';
 
 export default class Rt extends Component {
     constructor(props) {
         super(props);
-        this.rtInput = null;
-
-        this.setRtInputRef = element => {
-            this.rtInput = element;
-        };
-
-        this.rtInputSetter = () => {
-            // Focus the text input using the raw DOM API
-            if (this.rtInput) {
-                console.log("rtInputSetter")
-                this.rtInput.value = "hello";
-            } else {
-                console.log("no rtInputSetter")
-            }
-        };
-
-        // Initializing the state 
-        this.state = {
-            color: 'lightgreen',
-            currentStimulus: 0,
-            currentCount: 10,
-            show: true,
-            animate: true,
-            cross: true,
-            firstLoop: true,
-            expectedKeys: {
-                il: 37,
-                ir: 39,
-                cl: 37,
-                cr: 39
-            },
-            data: [],
-            allowedKeys: [37, 39],
-            isStarted: true
-        };
-        this.buttonText = "Stop"
+        this.once = true
+        this.first = true
+        this.rtInput = null
         this.keyPressed = null
         this.rt = null
         this.gotKey = false
         this.results = <p>Initializing</p>
+
+        // Initializing the state 
+        this.state = {
+            isStarted: true,
+            isManual: true,
+            currentCount: 10
+        };
+
+        // reference so we can dispatch to the element
+        this.setRtInputRef = element => {
+            this.rtInput = element;
+        };
+
+        // set the input field
+        this.rtInputSetter = () => {
+            // Focus the text input using the raw DOM API
+            if (this.rtInput) {
+                console.log("rtInputSetter")
+                this.rtInput.value = "";
+            } else {
+                console.log("no rtInputSetter")
+            }
+        };
     }
+
     componentDidMount() {
         // Changing the state after 2 sec
         // from the time when the component
@@ -53,12 +44,21 @@ export default class Rt extends Component {
         setTimeout(() => {
             this.setState({ color: 'wheat' })
         }, 2000);
-        // this.animate()
+
         this.intervalId = setInterval(this.timer.bind(this), 1000)
         this.rtInputSetter()
-        this.rtInput.addEventListener('keypress', (event) => {
-            console.log("window keypress")
-          });
+        this.rtInput.addEventListener('keypress', (event) => {// screen out spurios events
+            console.log(event)
+            if (this.first && this.timing) {
+                this.rt = new Date() - this.rt
+                this.first = false
+                this.gotKey = true
+                let res = "key down = " + event.key + "  |  rt = " + this.rt + " ms"
+                console.log(res)
+                this.results = <p>{res}</p>
+                this.rtInput.value = "";
+            }
+        });
     }
 
     componentWillUnmount() {
@@ -74,16 +74,6 @@ export default class Rt extends Component {
         }
     }
 
-
-    animate = () => {
-        console.log('animate')
-
-        document.onkeydown = (e) => {
-            document.onkeydown = null
-            console.log("key down")
-        }
-
-    }
 
     timer() {
         this.setState({
@@ -114,34 +104,41 @@ export default class Rt extends Component {
     // This is simply an example that demonstrates
     // how you can dispatch an event on the element.
     triggerKeyPress() {
+        this.first = true; // triggers 4 events. only want first
         this.rtInput.dispatchEvent(new KeyboardEvent('keypress', { 'key': 'a' }
         ))
     }
 
-
     render() {
         let val
         let flankerI
-        let bText = this.state.isStarted ? "STOP" : "START";
+        let bText = this.state.isStarted ? "STOP" : "START"
+        let keySourceText = this.state.isManual ? "MANUAL KEY ENTRY" : "AUTO KEY DISPATCH"
+        let instructions1 = this.state.isManual ?
+            "hit a key as soon as you see the image" :
+            "Autoamtically dispatching a keypress after image rendered"
+        let instructions2 = this.state.isManual ?
+            "click MANUAL KEY ENTRY to enter AUTO DISPATCH MODE" :
+            "click AUTO DISPATCH MODE to enter MANUAL KEY ENTRY "
 
         if (this.state.currentCount >= 4 && this.state.currentCount <= 7) {
-            if (this.state.currentCount == 7) {
+            if (this.state.currentCount == 7 && this.once) {
                 // start timer
+                this.once = false
                 this.timing = true
-                this.rt = new Date()
                 this.key = false
-
+                this.rt = new Date()
+                if (!this.state.isManual) {
+                    this.triggerKeyPress()
+                } else {
+                    this.first = true
+                }
             }
             val = <p>{this.state.currentCount}</p>
             flankerI = <p><img src={flankerImg} /></p>
-            // this.divRef.dispatchEvent(new KeyboardEvent('keypress', { 'key': 'a' }));
-            // this.triggerKeyPress()
-        } else if (this.state.currentCount == 2) {
-            console.log("2")
-            this.triggerKeyPress()
         } else if (this.state.currentCount > 7) {
-            //this.clearInput()
             val = <p>preparing...</p>
+            this.once = true
             this.timing = false
             this.results = <p></p>
         } else {
@@ -162,13 +159,18 @@ export default class Rt extends Component {
                             height: 80,
                             margin: 'auto'
                         }}>
-                        <h1> Realtime keydown event test</h1>
-                        <p> hit a key as soon as you see the image</p>
+                        <h1>Realtime keydown event test</h1>
+                        <p>{instructions1}<br></br><br></br>{instructions2}</p>
                         <p> debug info in chrome inspect console</p>
                         <button onClick={() => {
                             this.setState({ isStarted: !this.state.isStarted })
                             this.startStop()
                         }}>{bText}</button>
+                        <span>&nbsp;&nbsp;&nbsp;</span>
+                        <button onClick={() => {
+                            this.setState({ isManual: !this.state.isManual })
+                        }}>{keySourceText}</button>
+                        <p></p>
                         <div>
                             {val}
                             {flankerI}
@@ -177,14 +179,14 @@ export default class Rt extends Component {
                             ref={this.setRtInputRef}
                             id="rtInput"
                             contentEditable={true}
-                            placeholder="type a message"
+                            placeholder="hit a key when you see image"
                             data-reactid="137"
-                            onKeyPress={(e) => this.handler(e)}
-                        />
-                        <CustomTextInput
-                            inputRef={el => this.inputElement = el}
+                        // onKeyPress={(e) => this.handler(e)} no need. handled in window
                         />
                         <div>{this.results}</div>
+                        <p></p>
+                        <p></p>
+                        <a href="https://github.com/appliedrd/react_timing.git">github</a>
                     </div>
                 </div>
             </React.Fragment>
